@@ -11,7 +11,7 @@ export function getWeekdayDates(year: number, month: number, youbi: string): str
     if (d.getDay() === dayNum) dates.push(toIso(d));
     d.setDate(d.getDate() + 1);
   }
-  return dates.slice(0, 4); // 第5週は除外
+  return dates; // 第5週まで含める
 }
 
 export function toIso(d: Date): string {

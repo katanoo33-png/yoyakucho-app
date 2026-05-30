@@ -86,6 +86,32 @@ export async function deleteNamedSave(name: string): Promise<void> {
   if (!json.ok) throw new Error(json.error ?? '削除エラー');
 }
 
+export async function sendExportEmail(to: string, filename: string, base64: string): Promise<void> {
+  const url = getGasUrl();
+  if (!url) throw new Error('GAS URLが未設定です');
+  const body = new URLSearchParams();
+  body.append('action', 'sendEmail');
+  body.append('to', to);
+  body.append('filename', filename);
+  body.append('base64', base64);
+  const res = await fetch(url, { method: 'POST', body, redirect: 'follow' });
+  const json = await res.json() as { ok: boolean; error?: string };
+  if (!json.ok) throw new Error(json.error ?? 'メール送信エラー');
+}
+
+export async function saveToDrive(filename: string, base64: string): Promise<string> {
+  const url = getGasUrl();
+  if (!url) throw new Error('GAS URLが未設定です');
+  const body = new URLSearchParams();
+  body.append('action', 'saveToDrive');
+  body.append('filename', filename);
+  body.append('base64', base64);
+  const res = await fetch(url, { method: 'POST', body, redirect: 'follow' });
+  const json = await res.json() as { ok: boolean; url?: string; error?: string };
+  if (!json.ok) throw new Error(json.error ?? 'Drive保存エラー');
+  return json.url ?? '';
+}
+
 export async function fetchEmployees(): Promise<EmployeeList> {
   const url = getGasUrl();
   if (!url) return { doctors: [], hygienists: [] };

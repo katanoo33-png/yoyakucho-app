@@ -847,6 +847,121 @@ body {
 }
 .btn-del-sm:hover { background: var(--debut-lt); }
 
+/* ── 出力ボタン（ヘッダー） ─────────────────────────────────── */
+.btn-hdr-export {
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  padding: 5px 14px;
+  border-radius: var(--r);
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background .12s;
+  letter-spacing: .04em;
+}
+.btn-hdr-export:hover { background: var(--blue-lt); }
+
+/* ── 出力確認モーダル ───────────────────────────────────────── */
+.modal-export { width: 460px; }
+
+.export-summary {
+  background: var(--blue-bg);
+  border: 1px solid var(--blue-muted);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.export-summary-title {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+.export-summary-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.export-stat { font-size: .82rem; color: var(--text-2); }
+.export-stat strong { color: var(--navy); font-size: 1rem; }
+.export-stat-sep { color: var(--light); }
+.export-filename {
+  font-size: .72rem;
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+
+.export-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.export-section:last-of-type { border-bottom: none; }
+
+.export-section-label {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.btn-export-action {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: inherit;
+  transition: background .12s;
+  letter-spacing: .03em;
+}
+.btn-export-action:hover:not(:disabled) { background: var(--navy-lt); }
+.btn-export-action:disabled { opacity: .45; cursor: not-allowed; }
+
+.export-email-row {
+  display: flex;
+  gap: 8px;
+}
+.export-email-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-dk);
+  border-radius: var(--r-sm);
+  font-size: .84rem;
+  font-family: inherit;
+  color: var(--text);
+}
+.export-email-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,212,.12);
+}
+
+.export-drive-path {
+  font-size: .72rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.export-done {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #edfaf3;
+  border: 1px solid #a3e0be;
+  border-radius: var(--r-sm);
+  font-size: .8rem;
+  color: var(--success);
+  font-weight: 600;
+}
+
 /* ── スクロールバー ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

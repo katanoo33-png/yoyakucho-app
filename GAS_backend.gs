@@ -60,6 +60,10 @@ function doPost(e) {
       result = saveNamedSnapshot_(e.parameter.name || '', JSON.parse(e.parameter.data || '[]'));
     } else if (action === 'deleteSave') {
       result = deleteNamedSave_(e.parameter.name || '');
+    } else if (action === 'sendEmail') {
+      result = sendExportEmail_(e.parameter.to, e.parameter.filename, e.parameter.base64);
+    } else if (action === 'saveToDrive') {
+      result = saveToDrive_(e.parameter.filename, e.parameter.base64);
     } else {
       result = { ok: false, error: '不明なアクション: ' + action };
     }
@@ -286,18 +290,26 @@ function pad_(n) {
 }
 
 function fmtTime_(val) {
-  if (!val) return '';
-  if (typeof val === 'string') {
-    var m = val.match(/(\d{1,2})時(\d{2})分?/);
-    if (m) return ('0' + m[1]).slice(-2) + ':' + m[2];
-    m = val.match(/(\d{1,2})時/);
-    if (m) return ('0' + m[1]).slice(-2) + ':00';
-    m = val.match(/(\d{1,2}):(\d{2})/);
-    if (m) return ('0' + m[1]).slice(-2) + ':' + m[2];
-    return val;
+  if (val === '' || val === null || val === undefined) return '';
+  // Google Sheets が時刻を数値（1日の分数）で返す場合の変換
+  if (typeof val === 'number') {
+    var totalMin = Math.round(val * 24 * 60);
+    var h = Math.floor(totalMin / 60);
+    var m = totalMin % 60;
+    return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
   }
   if (val instanceof Date) {
     return Utilities.formatDate(val, 'Asia/Tokyo', 'HH:mm');
+  }
+  if (typeof val === 'string') {
+    var s = val.trim();
+    var m = s.match(/(\d{1,2})時(\d{2})分?/);
+    if (m) return ('0' + m[1]).slice(-2) + ':' + m[2];
+    m = s.match(/(\d{1,2})時/);
+    if (m) return ('0' + m[1]).slice(-2) + ':00';
+    m = s.match(/(\d{1,2}):(\d{2})/);
+    if (m) return ('0' + m[1]).slice(-2) + ':' + m[2];
+    return s;
   }
   return String(val);
 }
@@ -327,6 +339,48 @@ function getEmployees_() {
 
 function fmtYoubi_(val) {
   return String(val || '').trim().replace(/曜日$/, '').replace(/曜$/, '');
+}
+
+// ──────────────────────────────────────────────
+// メール送信（Excelファイルを添付）
+// ──────────────────────────────────────────────
+var DRIVE_FOLDER_ID = '1-37gb32-bR9NzWdUCxkXUgPckhRqyvzC';
+
+function sendExportEmail_(to, filename, base64) {
+  if (!to) return { ok: false, error: '送付先メールアドレスが空です' };
+  if (!base64) return { ok: false, error: 'ファイルデータが空です' };
+  var decoded = Utilities.base64Decode(base64);
+  var blob = Utilities.newBlob(
+    decoded,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename || 'schedule.xlsx'
+  );
+  MailApp.sendEmail({
+    to: to,
+    subject: '【厚生局提出スケジュール】' + (filename || 'schedule.xlsx'),
+    body: '添付ファイルをご確認ください。\n\n訪問歯科スケジューラーより自動送信',
+    attachments: [blob]
+  });
+  return { ok: true };
+}
+
+// ──────────────────────────────────────────────
+// Google Drive 保存
+// ──────────────────────────────────────────────
+function saveToDrive_(filename, base64) {
+  if (!base64) return { ok: false, error: 'ファイルデータが空です' };
+  var decoded = Utilities.base64Decode(base64);
+  var blob = Utilities.newBlob(
+    decoded,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename || 'schedule.xlsx'
+  );
+  var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  // 同名ファイルがあれば上書き（削除→新規作成）
+  var existing = folder.getFilesByName(filename);
+  while (existing.hasNext()) { existing.next().setTrashed(true); }
+  var file = folder.createFile(blob);
+  return { ok: true, url: file.getUrl() };
 }
 
 // ──────────────────────────────────────────────

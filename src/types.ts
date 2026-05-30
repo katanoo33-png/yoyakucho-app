@@ -36,7 +36,8 @@ export type ModalState =
   | { type: 'editPatient'; patientName: string }
   | { type: 'newPatient' }
   | { type: 'saveAs' }
-  | { type: 'saveList' };
+  | { type: 'saveList' }
+  | { type: 'export' };
 
 export type StaffRole = 'dentist' | 'hygienist';
 export type Staff = { id: string; name: string; role: StaffRole; active: boolean };

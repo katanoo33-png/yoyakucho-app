@@ -1,13 +1,70 @@
 import { useState, useEffect, useCallback, Fragment, memo } from 'react';
 import './App.css';
+import * as XLSX from 'xlsx';
 import type { GasPatient, VisitRecord, ModalState, SavedScheduleMeta, EmployeeList } from './types';
 import {
   getGasUrl, saveGasUrl,
   fetchPatients, fetchSchedule, saveSchedule,
   fetchSaveList, loadNamedSave, saveNamedSnapshot, deleteNamedSave,
-  fetchEmployees,
+  fetchEmployees, sendExportEmail, saveToDrive,
 } from './api';
 import { getWeekdayDates, newId, getKanaGroup, KANA_GROUPS } from './utils';
+
+// ── Excel ビルド ───────────────────────────────────────────────
+function buildExcelBase64(visits: VisitRecord[], year: number, month: number): string {
+  const title = `${year}年${month}月 厚生局訪問スケジュール`;
+
+  // ヘッダー行
+  const headers = ['患者名', '曜日', '時間', '訪問日一覧', '担当医師', '担当衛生士', 'メモ'];
+
+  // 患者ごとにまとめる
+  const patientMap = new Map<string, VisitRecord[]>();
+  for (const v of visits) {
+    const arr = patientMap.get(v.patientName) ?? [];
+    arr.push(v);
+    patientMap.set(v.patientName, arr);
+  }
+
+  const rows: (string | number)[][] = [
+    [title],
+    [],
+    headers,
+  ];
+
+  for (const [name, pvs] of patientMap) {
+    const sorted = [...pvs].sort((a, b) => a.date.localeCompare(b.date));
+    const dates = sorted.map(v => {
+      const d = new Date(v.date + 'T00:00:00');
+      return `${d.getMonth()+1}/${d.getDate()}`;
+    }).join('　');
+    const youbi = (() => {
+      if (sorted.length === 0) return '';
+      const d = new Date(sorted[0].date + 'T00:00:00');
+      return ['日','月','火','水','木','金','土'][d.getDay()];
+    })();
+    rows.push([
+      name,
+      youbi,
+      sorted[0]?.time ?? '',
+      dates,
+      sorted[0]?.doctor ?? '',
+      sorted[0]?.hygienist ?? '',
+      sorted[0]?.note ?? '',
+    ]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // タイトル行を結合
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 6 }, { wch: 8 }, { wch: 40 },
+    { wch: 12 }, { wch: 12 }, { wch: 20 },
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `${month}月スケジュール`);
+  return XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+}
 
 const DEBUT_KEY = 'patientDebuts_v1';
 const EMPLOYEE_CACHE_KEY = 'employeeCache_v1';
@@ -426,6 +483,136 @@ function SaveListModal({ list, activeSave, onLoad, onDelete, onClose }: {
   );
 }
 
+// ── 出力確認モーダル ──────────────────────────────────────────
+function ExportModal({ year, month, visits, onClose }: {
+  year: number; month: number;
+  visits: VisitRecord[];
+  onClose: () => void;
+}) {
+  const [email, setEmail]       = useState('');
+  const [sending, setSending]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [doneMsg, setDoneMsg]   = useState('');
+
+  const filename = `${year}年${month}月_厚生局訪問スケジュール.xlsx`;
+
+  function handleDownload() {
+    const b64 = buildExcelBase64(visits, year, month);
+    const bin = atob(b64);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setDoneMsg('ダウンロードしました');
+  }
+
+  async function handleEmail() {
+    if (!email.trim()) return;
+    setSending(true);
+    setDoneMsg('');
+    try {
+      const b64 = buildExcelBase64(visits, year, month);
+      await sendExportEmail(email.trim(), filename, b64);
+      setDoneMsg(`${email} に送信しました`);
+    } catch (e) {
+      setDoneMsg('送信エラー: ' + (e as Error).message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleDrive() {
+    setSaving(true);
+    setDoneMsg('');
+    try {
+      const b64 = buildExcelBase64(visits, year, month);
+      const url = await saveToDrive(filename, b64);
+      setDoneMsg('Driveに保存しました');
+      if (url) window.open(url, '_blank');
+    } catch (e) {
+      setDoneMsg('Drive保存エラー: ' + (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // 患者数・訪問件数のサマリー
+  const patientCount = new Set(visits.map(v => v.patientName)).size;
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal modal-export" onClick={e => e.stopPropagation()}>
+        <h2>出力確認</h2>
+
+        {/* サマリー */}
+        <div className="export-summary">
+          <div className="export-summary-title">{year}年{month}月 スケジュール</div>
+          <div className="export-summary-stats">
+            <span className="export-stat"><strong>{patientCount}</strong> 名</span>
+            <span className="export-stat-sep">/</span>
+            <span className="export-stat"><strong>{visits.length}</strong> 件の訪問</span>
+          </div>
+          <div className="export-filename">📄 {filename}</div>
+        </div>
+
+        {/* 1. ローカル保存 */}
+        <div className="export-section">
+          <div className="export-section-label">① ローカルに保存</div>
+          <button className="btn-export-action" onClick={handleDownload}>
+            Excel ダウンロード
+          </button>
+        </div>
+
+        {/* 2. メール送信 */}
+        <div className="export-section">
+          <div className="export-section-label">② メールで送付</div>
+          <div className="export-email-row">
+            <input
+              type="email"
+              className="export-email-input"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="送付先メールアドレス"
+            />
+            <button
+              className="btn-export-action"
+              onClick={handleEmail}
+              disabled={sending || !email.trim()}
+            >
+              {sending ? '送信中…' : '送信'}
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Drive保存 */}
+        <div className="export-section">
+          <div className="export-section-label">③ Google Drive に保存</div>
+          <div className="export-drive-path">保存先: 指定フォルダ</div>
+          <button
+            className="btn-export-action"
+            onClick={handleDrive}
+            disabled={saving}
+          >
+            {saving ? '保存中…' : 'Drive に保存'}
+          </button>
+        </div>
+
+        {/* 完了メッセージ */}
+        {doneMsg && <div className="export-done">{doneMsg}</div>}
+
+        <div className="modal-row" style={{ marginTop: 20 }}>
+          <div style={{ flex: 1 }} />
+          <button className="btn-cancel" onClick={onClose}>閉じる</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── メインApp ─────────────────────────────────────────────────
 export default function App() {
   const now = new Date();
@@ -659,6 +846,7 @@ export default function App() {
           <button className="btn-hdr-outline" onClick={() => setModal({ type: 'newPatient' })}>＋ 新規患者</button>
           <button className="btn-hdr-outline" onClick={() => setModal({ type: 'saveList' })}>一覧</button>
           <button className="btn-hdr-outline" onClick={() => setModal({ type: 'saveAs' })}>名前付き保存</button>
+          <button className="btn-hdr-export" onClick={() => setModal({ type: 'export' })}>出力</button>
           <button className="btn-hdr-solid" onClick={handleSave} disabled={saving || loading}>
             {saving ? '保存中…' : '保存'}
           </button>
@@ -849,6 +1037,15 @@ export default function App() {
         <SaveAsModal
           defaultName={`${year}年${month}月`}
           onSave={handleSaveAs}
+          onClose={() => setModal({ type: 'closed' })}
+        />
+      )}
+
+      {/* 出力確認 */}
+      {modal.type === 'export' && (
+        <ExportModal
+          year={year} month={month}
+          visits={visits}
           onClose={() => setModal({ type: 'closed' })}
         />
       )}
