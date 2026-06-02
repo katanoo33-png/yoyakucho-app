@@ -299,6 +299,7 @@ body {
 .group-label {
   display: block;
   padding: 6px 18px;
+  scroll-margin-top: 96px;
   font-size: .66rem;
   font-weight: 700;
   color: var(--muted);
