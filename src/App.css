@@ -338,6 +338,8 @@ body {
   flex-shrink: 0;
   vertical-align: middle;
   letter-spacing: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .name-text { vertical-align: middle; font-weight: 500; color: var(--text); }
 

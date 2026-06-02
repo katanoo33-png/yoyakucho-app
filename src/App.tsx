@@ -974,7 +974,7 @@ export default function App() {
                           ? pt.youbis.map(y => <YoubiBadge key={y} youbi={y} />)
                           : <YoubiBadge youbi="" />}
                       </td>
-                      <td className="td-time">{pt.pvs[0]?.time ?? '—'}</td>
+                      <td className="td-time">{pt.pvs[0]?.time || pt.info?.time || '—'}</td>
                       <td className="td-dates">
                         {pt.pvs.length === 0 ? (
                           <span className="no-visit">訪問なし</span>
@@ -987,8 +987,8 @@ export default function App() {
                           </span>
                         ))}
                       </td>
-                      <td className="td-doctor"><StaffBadge name={pt.pvs[0]?.doctor ?? ''} role="doctor" idx={employees.doctors.indexOf(pt.pvs[0]?.doctor ?? '')} /></td>
-                      <td className="td-hyg"><StaffBadge name={pt.pvs[0]?.hygienist ?? ''} role="hyg" idx={employees.hygienists.indexOf(pt.pvs[0]?.hygienist ?? '')} /></td>
+                      <td className="td-doctor"><StaffBadge name={pt.pvs[0]?.doctor || pt.info?.doctor || ''} role="doctor" idx={employees.doctors.indexOf(pt.pvs[0]?.doctor || pt.info?.doctor || '')} /></td>
+                      <td className="td-hyg"><StaffBadge name={pt.pvs[0]?.hygienist || pt.info?.hygienist || ''} role="hyg" idx={employees.hygienists.indexOf(pt.pvs[0]?.hygienist || pt.info?.hygienist || '')} /></td>
                       <td className="td-edit">
                         <button
                           className="btn-edit"
