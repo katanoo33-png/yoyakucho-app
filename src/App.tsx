@@ -8,7 +8,7 @@ import {
   fetchSaveList, loadNamedSave, saveNamedSnapshot, deleteNamedSave,
   fetchEmployees, sendExportEmail, saveToDrive,
 } from './api';
-import { getWeekdayDates, newId, getKanaGroup, KANA_GROUPS } from './utils';
+import { getWeekdayDates, normalizeYoubi, newId, getKanaGroup, KANA_GROUPS } from './utils';
 
 // ── Excel ビルド ───────────────────────────────────────────────
 function buildExcelBase64(visits: VisitRecord[], year: number, month: number): string {
@@ -116,7 +116,10 @@ function autoGenerate(
 }
 
 function mergeWithSaved(auto: VisitRecord[], saved: VisitRecord[]): VisitRecord[] {
-  return saved.length ? saved : auto;
+  if (!saved.length) return auto;
+  const savedNames = new Set(saved.map(v => v.patientName));
+  const unscheduled = auto.filter(v => !savedNames.has(v.patientName));
+  return [...saved, ...unscheduled];
 }
 
 // ── カレンダーアイコン ────────────────────────────────────────
@@ -798,9 +801,11 @@ export default function App() {
     for (const p of patients) {
       const ex = map.get(p.name);
       if (ex) {
-        if (p.youbi && !ex.youbis.includes(p.youbi)) ex.youbis.push(p.youbi);
+        const ny = normalizeYoubi(p.youbi);
+        if (ny && !ex.youbis.includes(ny)) ex.youbis.push(ny);
       } else {
-        map.set(p.name, { kana: p.firstName, youbis: p.youbi ? [p.youbi] : [], info: p });
+        const ny = normalizeYoubi(p.youbi);
+        map.set(p.name, { kana: p.firstName, youbis: ny ? [ny] : [], info: p });
       }
     }
     for (const v of visits) {
