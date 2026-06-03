@@ -4,7 +4,7 @@
  * 【デプロイ手順】
  *   1. このファイルの内容を Google Apps Script エディタに貼り付ける
  *   2. スクリプトプロパティに以下を設定:
- *        MASTER_SS_ID  = 1QmBFIvQklZLllhN5kbyR8Z1Ozy04gfrM2vG7_4XLqG8
+ *        MASTER_SS_ID  = （GASスクリプトプロパティで設定）
  *   3. デプロイ → 新しいデプロイ → ウェブアプリ
  *        実行ユーザー : 自分
  *        アクセスできるユーザー : 全員
@@ -16,8 +16,7 @@
  *                        （厚生局提出スケジュール.gsheet）の「スケジュール」シート
  */
 
-var MASTER_SS_ID    = PropertiesService.getScriptProperties().getProperty('MASTER_SS_ID')
-                      || '1QmBFIvQklZLllhN5kbyR8Z1Ozy04gfrM2vG7_4XLqG8';
+var MASTER_SS_ID    = PropertiesService.getScriptProperties().getProperty('MASTER_SS_ID');
 var MASTER_SHEET    = 'マスター';
 var SCHEDULE_SHEET  = 'スケジュール';
 
