@@ -18,6 +18,23 @@ function normalizeToIso(dateStr: string): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// 「11時」「11:00」「11時30分」→ "HH:mm" に正規化
+function normalizeTime(val: string): string {
+  if (!val) return '';
+  // 既に HH:mm 形式
+  if (/^\d{1,2}:\d{2}$/.test(val.trim())) {
+    const [h, m] = val.trim().split(':');
+    return `${h.padStart(2,'0')}:${m}`;
+  }
+  // 「11時30分」「11時30」
+  const m1 = val.match(/(\d{1,2})時(\d{2})分?/);
+  if (m1) return `${m1[1].padStart(2,'0')}:${m1[2]}`;
+  // 「11時」
+  const m2 = val.match(/(\d{1,2})時/);
+  if (m2) return `${m2[1].padStart(2,'0')}:00`;
+  return '';
+}
+
 function buildExcelBase64(visits: VisitRecord[], year: number, month: number): string {
   const title = `${year}年${month}月 厚生局訪問スケジュール`;
 
@@ -255,7 +272,7 @@ function PatientEditModal({ patientName, kana, year, month, currentVisits, patie
       return isNaN(d.getTime()) ? v.date : toIso(d);
     })
   );
-  const [time, setTime] = useState(first?.time ?? patientInfo?.time ?? '');
+  const [time, setTime] = useState(normalizeTime(first?.time ?? patientInfo?.time ?? ''));
   const [doctor, setDoctor] = useState(first?.doctor ?? patientInfo?.doctor ?? '');
   const [hygienist, setHygienist] = useState(first?.hygienist ?? patientInfo?.hygienist ?? '');
   const [note, setNote] = useState(first?.note ?? '');

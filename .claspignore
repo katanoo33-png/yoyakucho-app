@@ -1,0 +1,17 @@
+node_modules/**
+dist/**
+src/**
+public/**
+.claude/**
+*.ts
+*.tsx
+*.css
+*.json
+!appsscript.json
+*.md
+*.ps1
+*.lock
+*.bak
+*.js
+*.html
+vite.config.ts
