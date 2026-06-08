@@ -2,7 +2,7 @@ import type { GasPatient, VisitRecord, SavedScheduleMeta, EmployeeList } from '.
 
 const GAS_URL_KEY = 'gasUrl_hokkyoku_v1';
 // 最新GASデプロイURL（clasp管理）
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwlM2VnVzM3wZZJx_7ayCBeHgd3EKNpOrayUKyl34yu_2fw7838JaH3A2_z0xNpyH7M/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyeRxmi0nAYfscqPNvrRUnMSJSG-SVj3XAytp72YKyAhddd5o6VML70ApVCcPoVLMkJAg/exec';
 
 export function getGasUrl(): string {
   // 環境変数(ビルド時) → デフォルト → localStorage の優先順
