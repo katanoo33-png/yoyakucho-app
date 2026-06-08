@@ -989,4 +989,132 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-dk); border-radius: 3px; }
+
+/* ── モバイル対応 (〜640px) ─────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* ヘッダー: 2行レイアウト */
+  .hdr {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px;
+    min-height: 44px;
+  }
+  .hdr-title { display: none; }
+  .badge-save { display: none; }
+  .hdr-nav {
+    order: 1;
+    flex: 1;
+    margin: 0;
+  }
+  .hdr-actions {
+    order: 2;
+    gap: 5px;
+  }
+  /* 新規患者・スナップショットは非表示（⚙から代替） */
+  .btn-hdr-outline { display: none; }
+  .btn-hdr-export { padding: 5px 11px; font-size: .74rem; }
+  .btn-hdr-solid  { padding: 5px 14px; font-size: .74rem; }
+
+  /* 50音タブ */
+  .kana-bar { padding: 6px 12px; top: 44px; }
+  .kana-tab { padding: 4px 9px; font-size: .72rem; }
+
+  /* テーブルラッパー */
+  .table-wrap { padding: 0; }
+
+  /* テーブル → カードリスト */
+  .tbl { display: block; width: 100%; border: none; box-shadow: none; background: transparent; }
+  .tbl thead { display: none; }
+  .tbl tbody { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; }
+
+  /* グループ行（あ行・か行…） */
+  .tbl .group-row { display: block; }
+  .tbl .group-row td { padding: 12px 0 4px; }
+
+  /* 患者カード */
+  .tbl tr.tr-pt, .tbl tr.tr-manual {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 10px 12px;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+  }
+  .tbl tr.tr-pt:active { background: var(--blue-bg); }
+
+  /* 名前 → 1行目左 */
+  .td-name {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    padding: 0 0 2px;
+  }
+
+  /* 曜日 → 1行目右 */
+  .td-youbi {
+    grid-column: 3;
+    grid-row: 1;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* 時間 → 2行目左（小さく） */
+  .td-time {
+    grid-column: 1;
+    grid-row: 2;
+    border: none;
+    padding: 0;
+    font-size: .78rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* 訪問日チップ → 2行目中央～右 */
+  .td-dates {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    border: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+
+  /* 担当医師・衛生士・編集ボタン: モバイルでは非表示 */
+  .td-doctor, .td-hyg, .td-edit { display: none; }
+
+  /* アバター小さく */
+  .name-avatar { width: 28px; height: 28px; font-size: .78rem; flex-shrink: 0; }
+
+  /* モーダル幅 */
+  .overlay { align-items: flex-end; padding: 0; }
+  .modal, .modal-edit, .modal-wide, .modal-export, .modal-settings {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    overflow-y: auto;
+  }
+
+  /* カレンダー縮小 */
+  .cal-cell { min-height: 30px; font-size: .8rem; }
+  .cal-dow  { font-size: .72rem; }
+
+  /* 出力モーダルのメール行 */
+  .export-email-row { flex-direction: column; }
+  .export-email-row .btn-export-action { width: 100%; }
+}
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
