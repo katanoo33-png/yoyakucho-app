@@ -850,6 +850,26 @@ body {
 }
 .btn-del-sm:hover { background: var(--debut-lt); }
 
+/* ── スナップショット保存行 ─────────────────────────────────── */
+.snapshot-save-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.snapshot-name-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: .84rem;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color .15s;
+}
+.snapshot-name-input:focus { border-color: var(--navy); }
+
 /* ── 出力ボタン（ヘッダー） ─────────────────────────────────── */
 .btn-hdr-export {
   background: var(--blue);

@@ -8,7 +8,7 @@ import {
   fetchSaveList, loadNamedSave, saveNamedSnapshot, deleteNamedSave,
   fetchEmployees, sendExportEmail, saveToDrive,
 } from './api';
-import { getWeekdayDates, normalizeYoubi, newId, getKanaGroup, KANA_GROUPS } from './utils';
+import { getWeekdayDates, normalizeYoubi, newId, getKanaGroup, KANA_GROUPS, formatDateChip, toIso } from './utils';
 
 // ── Excel ビルド ───────────────────────────────────────────────
 function buildExcelBase64(visits: VisitRecord[], year: number, month: number): string {
@@ -243,7 +243,13 @@ function PatientEditModal({ patientName, kana, year, month, currentVisits, patie
   onClose: () => void;
 }) {
   const first = currentVisits[0];
-  const [selectedDates, setSelectedDates] = useState<string[]>(currentVisits.map(v => v.date));
+  const [selectedDates, setSelectedDates] = useState<string[]>(
+    currentVisits.map(v => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v.date)) return v.date;
+      const d = new Date(v.date);
+      return isNaN(d.getTime()) ? v.date : toIso(d);
+    })
+  );
   const [time, setTime] = useState(first?.time ?? patientInfo?.time ?? '');
   const [doctor, setDoctor] = useState(first?.doctor ?? patientInfo?.doctor ?? '');
   const [hygienist, setHygienist] = useState(first?.hygienist ?? patientInfo?.hygienist ?? '');
@@ -301,7 +307,7 @@ function PatientEditModal({ patientName, kana, year, month, currentVisits, patie
 
         {sorted.length > 0 && (
           <div className="selected-dates">
-            {sorted.map(d => d.slice(5).replace('-', '/')).join('  ')}
+            {sorted.map(d => formatDateChip(d)).join('　')}
           </div>
         )}
 
@@ -420,47 +426,46 @@ function NewPatientModal({ year, month, employees, onAdd, onClose }: {
   );
 }
 
-// ── 名前付き保存モーダル ──────────────────────────────────────
-function SaveAsModal({ defaultName, onSave, onClose }: {
-  defaultName: string;
-  onSave: (name: string) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(defaultName);
-  return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <h2>名前を付けて保存</h2>
-        <p className="modal-note">同じ名前で保存すると上書きされます。</p>
-        <label className="field">
-          <span>保存名 <em>*</em></span>
-          <input type="text" value={name} onChange={e => setName(e.target.value)}
-            placeholder="例: 2026年5月確定版" autoFocus />
-        </label>
-        <div className="modal-row">
-          <button className="btn-cancel" onClick={onClose}>キャンセル</button>
-          <button className="btn-primary" disabled={!name.trim()}
-            onClick={() => name.trim() && onSave(name.trim())}>保存</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── 保存一覧モーダル ──────────────────────────────────────────
-function SaveListModal({ list, activeSave, onLoad, onDelete, onClose }: {
+// ── スナップショットモーダル（一覧＋新規保存） ───────────────
+function SaveListModal({ list, activeSave, defaultSaveName, onLoad, onDelete, onSaveNew, onClose }: {
   list: SavedScheduleMeta[];
   activeSave: string | null;
+  defaultSaveName: string;
   onLoad: (name: string) => void;
   onDelete: (name: string) => void;
+  onSaveNew: (name: string) => void;
   onClose: () => void;
 }) {
+  const [newName, setNewName] = useState(defaultSaveName);
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
-        <h2>保存済みスナップショット</h2>
+        <h2>スナップショット管理</h2>
+        <p className="modal-note">
+          現在の編集内容を名前を付けて保存できます。過去に保存したバージョンをいつでも読み込めます。
+        </p>
+
+        {/* 新規保存エリア */}
+        <div className="snapshot-save-row">
+          <input
+            className="snapshot-name-input"
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="例: 2026年6月確定版"
+          />
+          <button
+            className="btn-primary"
+            disabled={!newName.trim()}
+            onClick={() => newName.trim() && onSaveNew(newName.trim())}
+          >
+            この名前で保存
+          </button>
+        </div>
+
+        {/* 保存済み一覧 */}
         {list.length === 0 ? (
-          <p className="modal-note">保存済みのデータはありません。</p>
+          <p className="modal-note" style={{ marginTop: 12 }}>まだ保存済みのスナップショットはありません。</p>
         ) : (
           <ul className="save-list">
             {list.map(s => (
@@ -848,11 +853,10 @@ export default function App() {
         </div>
         {activeSave && <span className="badge-save">{activeSave}</span>}
         <div className="hdr-actions">
-          <button className="btn-hdr-outline" onClick={() => setModal({ type: 'newPatient' })}>＋ 新規患者</button>
-          <button className="btn-hdr-outline" onClick={() => setModal({ type: 'saveList' })}>一覧</button>
-          <button className="btn-hdr-outline" onClick={() => setModal({ type: 'saveAs' })}>名前付き保存</button>
-          <button className="btn-hdr-export" onClick={() => setModal({ type: 'export' })}>出力</button>
-          <button className="btn-hdr-solid" onClick={handleSave} disabled={saving || loading}>
+          <button className="btn-hdr-outline" onClick={() => setModal({ type: 'newPatient' })} title="マスターシートにない患者を今月だけ手動で追加します">＋ 新規患者</button>
+          <button className="btn-hdr-outline" onClick={() => setModal({ type: 'saveList' })} title="現在の編集内容を名前付きで保存したり、過去のバージョンを読み込めます">スナップショット</button>
+          <button className="btn-hdr-export" onClick={() => setModal({ type: 'export' })} title="Excelダウンロード・メール送信・Google Drive保存">出力</button>
+          <button className="btn-hdr-solid" onClick={handleSave} disabled={saving || loading} title="現在の訪問スケジュールをGASに保存します（上書き）">
             {saving ? '保存中…' : '保存'}
           </button>
           <button className="btn-gear" onClick={openSettings}>⚙</button>
@@ -988,7 +992,7 @@ export default function App() {
                             key={v.id}
                             className={`chip${v.isNew ? ' chip-debut' : (i % 2 === 0 ? ' chip-alt' : ' chip-active')}`}
                           >
-                            {`${parseInt(v.date.slice(5, 7))}/${parseInt(v.date.slice(8))}`}
+                            {formatDateChip(v.date)}
                           </span>
                         ))}
                       </td>
@@ -1037,15 +1041,6 @@ export default function App() {
         />
       )}
 
-      {/* 名前付き保存 */}
-      {modal.type === 'saveAs' && (
-        <SaveAsModal
-          defaultName={`${year}年${month}月`}
-          onSave={handleSaveAs}
-          onClose={() => setModal({ type: 'closed' })}
-        />
-      )}
-
       {/* 出力確認 */}
       {modal.type === 'export' && (
         <ExportModal
@@ -1055,13 +1050,15 @@ export default function App() {
         />
       )}
 
-      {/* 保存一覧 */}
+      {/* スナップショット */}
       {modal.type === 'saveList' && (
         <SaveListModal
           list={saveList}
           activeSave={activeSave}
+          defaultSaveName={`${year}年${month}月`}
           onLoad={handleLoadSave}
           onDelete={handleDeleteSave}
+          onSaveNew={handleSaveAs}
           onClose={() => setModal({ type: 'closed' })}
         />
       )}

@@ -28,6 +28,22 @@ export function toDisplayDate(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}(${youbi})`;
 }
 
+/**
+ * 任意の日付文字列から「月/日」形式の表示文字列を返す
+ * ISO形式(YYYY-MM-DD)・スラッシュ形式(YYYY/MM/DD)・
+ * Dateオブジェクトのtostring形式など様々な形式に対応
+ */
+export function formatDateChip(dateStr: string): string {
+  if (!dateStr) return '—';
+  // ISO形式 YYYY-MM-DD or YYYY/MM/DD
+  const isoMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (isoMatch) return `${parseInt(isoMatch[2])}/${parseInt(isoMatch[3])}`;
+  // その他: Dateパース
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return `${d.getMonth() + 1}/${d.getDate()}`;
+  return dateStr;
+}
+
 export function newId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
