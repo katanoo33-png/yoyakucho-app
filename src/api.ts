@@ -5,8 +5,9 @@ const GAS_URL_KEY = 'gasUrl_hokkyoku_v1';
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwlM2VnVzM3wZZJx_7ayCBeHgd3EKNpOrayUKyl34yu_2fw7838JaH3A2_z0xNpyH7M/exec';
 
 export function getGasUrl(): string {
-  // 環境変数 → localStorage → デフォルト の優先順
-  return import.meta.env.VITE_GAS_URL || localStorage.getItem(GAS_URL_KEY) || DEFAULT_GAS_URL;
+  // 環境変数(ビルド時) → デフォルト → localStorage の優先順
+  // localStorageに古いURLが残っていても上書きされない
+  return import.meta.env.VITE_GAS_URL || DEFAULT_GAS_URL || localStorage.getItem(GAS_URL_KEY) || '';
 }
 
 export function saveGasUrl(url: string): void {
