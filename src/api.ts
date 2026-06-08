@@ -1,9 +1,12 @@
 import type { GasPatient, VisitRecord, SavedScheduleMeta, EmployeeList } from './types';
 
 const GAS_URL_KEY = 'gasUrl_hokkyoku_v1';
+// 最新GASデプロイURL（clasp管理）
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwlM2VnVzM3wZZJx_7ayCBeHgd3EKNpOrayUKyl34yu_2fw7838JaH3A2_z0xNpyH7M/exec';
 
 export function getGasUrl(): string {
-  return import.meta.env.VITE_GAS_URL ?? localStorage.getItem(GAS_URL_KEY) ?? '';
+  // 環境変数 → localStorage → デフォルト の優先順
+  return import.meta.env.VITE_GAS_URL || localStorage.getItem(GAS_URL_KEY) || DEFAULT_GAS_URL;
 }
 
 export function saveGasUrl(url: string): void {
