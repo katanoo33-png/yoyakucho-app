@@ -4,7 +4,8 @@
  * 【デプロイ手順】
  *   1. このファイルの内容を Google Apps Script エディタに貼り付ける
  *   2. スクリプトプロパティに以下を設定:
- *        MASTER_SS_ID  = （GASスクリプトプロパティで設定）
+ *        MASTER_SS_ID    = マスターシートのスプレッドシートID
+ *        DRIVE_FOLDER_ID = 出力Excelの保存先GoogleドライブフォルダID
  *   3. デプロイ → 新しいデプロイ → ウェブアプリ
  *        実行ユーザー : 自分
  *        アクセスできるユーザー : 全員
@@ -12,13 +13,13 @@
  *
  * 【スプレッドシート】
  *   患者マスター : MASTER_SS_ID で指定したGSS の「マスター」シート
- *   スケジュール保存先 : このスクリプトが紐付いている GSS
- *                        （厚生局提出スケジュール.gsheet）の「スケジュール」シート
+ *   スケジュール保存先 : このスクリプトが紐付いている GSS の「スケジュール」シート
  */
 
 var MASTER_SS_ID    = PropertiesService.getScriptProperties().getProperty('MASTER_SS_ID');
 var MASTER_SHEET    = 'マスター';
 var SCHEDULE_SHEET  = 'スケジュール';
+var DRIVE_FOLDER_ID = PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID') || '';
 
 // ──────────────────────────────────────────────
 // エントリーポイント（GET）
@@ -48,21 +49,31 @@ function doGet(e) {
 
 // ──────────────────────────────────────────────
 // エントリーポイント（POST）
+// URLSearchParams形式とJSON形式の両方に対応
 // ──────────────────────────────────────────────
 function doPost(e) {
   var result;
   try {
-    var action = e.parameter.action;
+    // JSON ボディ優先、なければ URLSearchParams パラメータを使用
+    var p = e.parameter;
+    var contentType = (e.postData && e.postData.type) || '';
+    if (contentType.indexOf('application/json') !== -1 || contentType.indexOf('text/plain') !== -1) {
+      try { p = JSON.parse(e.postData.contents); } catch (_) {}
+    }
+
+    var action = p.action;
     if (action === 'saveSchedule') {
-      result = saveSchedule_(JSON.parse(e.parameter.data || '[]'));
+      var data = typeof p.data === 'string' ? JSON.parse(p.data) : p.data;
+      result = saveSchedule_(data || []);
     } else if (action === 'saveNamed') {
-      result = saveNamedSnapshot_(e.parameter.name || '', JSON.parse(e.parameter.data || '[]'));
+      var data2 = typeof p.data === 'string' ? JSON.parse(p.data) : p.data;
+      result = saveNamedSnapshot_(p.name || '', data2 || []);
     } else if (action === 'deleteSave') {
-      result = deleteNamedSave_(e.parameter.name || '');
+      result = deleteNamedSave_(p.name || '');
     } else if (action === 'sendEmail') {
-      result = sendExportEmail_(e.parameter.to, e.parameter.filename, e.parameter.base64);
+      result = sendExportEmail_(p.to, p.filename, p.base64);
     } else if (action === 'saveToDrive') {
-      result = saveToDrive_(e.parameter.filename, e.parameter.base64);
+      result = saveToDrive_(p.filename, p.base64);
     } else {
       result = { ok: false, error: '不明なアクション: ' + action };
     }
@@ -343,43 +354,72 @@ function fmtYoubi_(val) {
 // ──────────────────────────────────────────────
 // メール送信（Excelファイルを添付）
 // ──────────────────────────────────────────────
-var DRIVE_FOLDER_ID = '1-37gb32-bR9NzWdUCxkXUgPckhRqyvzC';
-
 function sendExportEmail_(to, filename, base64) {
-  if (!to) return { ok: false, error: '送付先メールアドレスが空です' };
-  if (!base64) return { ok: false, error: 'ファイルデータが空です' };
-  var decoded = Utilities.base64Decode(base64);
+  if (!to || !to.trim()) return { ok: false, error: '送付先メールアドレスが空です' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) return { ok: false, error: 'メールアドレスの形式が正しくありません: ' + to };
+  if (!base64) return { ok: false, error: 'ファイルデータが空です（Excelビルドに失敗した可能性があります）' };
+
+  var decoded;
+  try {
+    decoded = Utilities.base64Decode(base64);
+  } catch (e) {
+    return { ok: false, error: 'ファイルのデコードに失敗しました: ' + e.message };
+  }
+
   var blob = Utilities.newBlob(
     decoded,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     filename || 'schedule.xlsx'
   );
+
+  var quota = MailApp.getRemainingDailyQuota();
+  if (quota <= 0) return { ok: false, error: '本日のメール送信上限に達しています（GmailアカウントのMailApp上限: 100通/日）' };
+
   MailApp.sendEmail({
-    to: to,
+    to: to.trim(),
     subject: '【厚生局提出スケジュール】' + (filename || 'schedule.xlsx'),
     body: '添付ファイルをご確認ください。\n\n訪問歯科スケジューラーより自動送信',
     attachments: [blob]
   });
-  return { ok: true };
+  return { ok: true, message: to.trim() + ' に送信しました（残り送信枠: ' + (quota - 1) + '通）' };
 }
 
 // ──────────────────────────────────────────────
 // Google Drive 保存
+// DRIVE_FOLDER_ID が未設定の場合はマイドライブのルートに保存
 // ──────────────────────────────────────────────
 function saveToDrive_(filename, base64) {
   if (!base64) return { ok: false, error: 'ファイルデータが空です' };
-  var decoded = Utilities.base64Decode(base64);
+
+  var decoded;
+  try {
+    decoded = Utilities.base64Decode(base64);
+  } catch (e) {
+    return { ok: false, error: 'ファイルのデコードに失敗しました: ' + e.message };
+  }
+
   var blob = Utilities.newBlob(
     decoded,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     filename || 'schedule.xlsx'
   );
-  var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+
+  var folder;
+  if (DRIVE_FOLDER_ID) {
+    try {
+      folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    } catch (e) {
+      return { ok: false, error: 'DriveフォルダIDが無効です（スクリプトプロパティ DRIVE_FOLDER_ID を確認してください）: ' + e.message };
+    }
+  } else {
+    folder = DriveApp.getRootFolder();
+  }
+
   // 同名ファイルがあれば上書き（削除→新規作成）
   var existing = folder.getFilesByName(filename);
   while (existing.hasNext()) { existing.next().setTrashed(true); }
   var file = folder.createFile(blob);
-  return { ok: true, url: file.getUrl() };
+  return { ok: true, url: file.getUrl(), folderName: folder.getName() };
 }
 
 // ──────────────────────────────────────────────

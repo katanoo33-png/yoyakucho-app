@@ -99,7 +99,7 @@ export async function sendExportEmail(to: string, filename: string, base64: stri
   if (!json.ok) throw new Error(json.error ?? 'メール送信エラー');
 }
 
-export async function saveToDrive(filename: string, base64: string): Promise<string> {
+export async function saveToDrive(filename: string, base64: string): Promise<{ url: string; folderName: string }> {
   const url = getGasUrl();
   if (!url) throw new Error('GAS URLが未設定です');
   const body = new URLSearchParams();
@@ -107,9 +107,9 @@ export async function saveToDrive(filename: string, base64: string): Promise<str
   body.append('filename', filename);
   body.append('base64', base64);
   const res = await fetch(url, { method: 'POST', body, redirect: 'follow' });
-  const json = await res.json() as { ok: boolean; url?: string; error?: string };
+  const json = await res.json() as { ok: boolean; url?: string; folderName?: string; error?: string };
   if (!json.ok) throw new Error(json.error ?? 'Drive保存エラー');
-  return json.url ?? '';
+  return { url: json.url ?? '', folderName: json.folderName ?? 'マイドライブ' };
 }
 
 export async function fetchEmployees(): Promise<EmployeeList> {

@@ -11,17 +11,22 @@ import {
 import { getWeekdayDates, normalizeYoubi, newId, getKanaGroup, KANA_GROUPS, formatDateChip, toIso } from './utils';
 
 // ── Excel ビルド ───────────────────────────────────────────────
+function normalizeToIso(dateStr: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function buildExcelBase64(visits: VisitRecord[], year: number, month: number): string {
   const title = `${year}年${month}月 厚生局訪問スケジュール`;
 
-  // ヘッダー行
   const headers = ['患者名', '曜日', '時間', '訪問日一覧', '担当医師', '担当衛生士', 'メモ'];
 
-  // 患者ごとにまとめる
   const patientMap = new Map<string, VisitRecord[]>();
   for (const v of visits) {
     const arr = patientMap.get(v.patientName) ?? [];
-    arr.push(v);
+    arr.push({ ...v, date: normalizeToIso(v.date) });
     patientMap.set(v.patientName, arr);
   }
 
@@ -538,8 +543,8 @@ function ExportModal({ year, month, visits, onClose }: {
     setDoneMsg('');
     try {
       const b64 = buildExcelBase64(visits, year, month);
-      const url = await saveToDrive(filename, b64);
-      setDoneMsg('Driveに保存しました');
+      const { url, folderName } = await saveToDrive(filename, b64);
+      setDoneMsg(`「${folderName}」に保存しました`);
       if (url) window.open(url, '_blank');
     } catch (e) {
       setDoneMsg('Drive保存エラー: ' + (e as Error).message);
