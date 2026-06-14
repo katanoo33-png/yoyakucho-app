@@ -1,13 +1,10 @@
 import type { GasPatient, VisitRecord, SavedScheduleMeta, EmployeeList } from './types';
 
 const GAS_URL_KEY = 'gasUrl_hokkyoku_v1';
-// 最新GASデプロイURL（clasp管理）
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyeRxmi0nAYfscqPNvrRUnMSJSG-SVj3XAytp72YKyAhddd5o6VML70ApVCcPoVLMkJAg/exec';
 
 export function getGasUrl(): string {
-  // 環境変数(ビルド時) → デフォルト → localStorage の優先順
-  // localStorageに古いURLが残っていても上書きされない
-  return import.meta.env.VITE_GAS_URL || DEFAULT_GAS_URL || localStorage.getItem(GAS_URL_KEY) || '';
+  // 環境変数(ビルド時) → localStorage の順で解決
+  return import.meta.env.VITE_GAS_URL || localStorage.getItem(GAS_URL_KEY) || '';
 }
 
 export function saveGasUrl(url: string): void {
@@ -114,6 +111,64 @@ export async function saveToDrive(filename: string, base64: string): Promise<{ u
   const json = await res.json() as { ok: boolean; url?: string; folderName?: string; error?: string };
   if (!json.ok) throw new Error(json.error ?? 'Drive保存エラー');
   return { url: json.url ?? '', folderName: json.folderName ?? 'マイドライブ' };
+}
+
+export async function fetchServiceTimes(name: string, year: number, month: number): Promise<import('./types').ServiceTimes[]> {
+  const url = getGasUrl();
+  if (!url) return [];
+  try {
+    const res = await fetch(
+      `${url}?action=getServiceTimes&name=${encodeURIComponent(name)}&year=${year}&month=${month}`,
+      { redirect: 'follow' }
+    );
+    const json = await res.json() as { ok: boolean; data?: import('./types').ServiceTimes[]; error?: string };
+    return json.ok ? (json.data ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function updatePatientTimes(
+  row: number,
+  times: import('./types').ServiceTimes & { careLevel?: import('./types').CareLevel }
+): Promise<void> {
+  const url = getGasUrl();
+  if (!url) throw new Error('GAS URLが未設定です');
+  const body = new URLSearchParams();
+  body.append('action', 'updatePatientTimes');
+  body.append('row', String(row));
+  body.append('times', JSON.stringify(times));
+  const res = await fetch(url, { method: 'POST', body, redirect: 'follow' });
+  const json = await res.json() as { ok: boolean; error?: string };
+  if (!json.ok) throw new Error(json.error ?? '患者時間の更新エラー');
+}
+
+export async function fetchRegisteredNames(year: number, month: number): Promise<string[]> {
+  const url = getGasUrl();
+  if (!url) return [];
+  try {
+    const res = await fetch(`${url}?action=getRegisteredNames&year=${year}&month=${month}`, { redirect: 'follow' });
+    const json = await res.json() as { ok: boolean; data?: string[] };
+    return json.ok ? (json.data ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+
+// kiroku（登録ページ）GAS：厚生局_訪問時間記録へ書き込む登録エンドポイント
+const KIROKU_GAS_URL = 'https://script.google.com/macros/s/AKfycbzrN2tl-V1F17UIJE-4HkL1zmZH8Mz3EDSIVRxtI5ZzfT-CLLb-GhtKkO4Nf64zgHzgjQ/exec';
+
+export async function registerKirokuMonth(payload: {
+  name: string; kana: string; kaigo: boolean;
+  year: number; month: number; data: unknown[];
+}): Promise<void> {
+  // no-corsのためレスポンスは読めない（kirokuアプリと同じ方式）
+  await fetch(KIROKU_GAS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchEmployees(): Promise<EmployeeList> {
