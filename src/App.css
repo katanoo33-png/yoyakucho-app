@@ -209,6 +209,56 @@ body {
 }
 .btn-gear:hover { background: rgba(255,255,255,.1); color: #fff; }
 
+.btn-admin {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.35);
+  color: rgba(255,255,255,.85);
+  padding: 5px 12px;
+  border-radius: var(--r);
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 600;
+  transition: background .12s, color .12s;
+  line-height: 1;
+}
+.btn-admin:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+/* 管理画面モーダル */
+.modal-admin { max-width: 480px; }
+
+.admin-links { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+.admin-link-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-1);
+  font-size: .9rem;
+  font-weight: 500;
+  transition: background .12s, border-color .12s;
+}
+.admin-link-btn:hover { background: #e8f4fd; border-color: #93c5fd; color: #1e40af; }
+.admin-link-icon { font-size: 1rem; }
+.admin-link-arrow { margin-left: auto; color: #94a3b8; font-size: .85rem; }
+
+.btn-reset-data {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 8px;
+  padding: 10px 18px;
+  background: #fff5f5;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s;
+}
+.btn-reset-data:hover { background: #fee2e2; }
+
 .badge-save {
   background: rgba(37,99,212,.25);
   border: 1px solid rgba(37,99,212,.45);

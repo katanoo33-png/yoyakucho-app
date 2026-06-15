@@ -155,6 +155,24 @@ export async function fetchRegisteredNames(year: number, month: number): Promise
   }
 }
 
+export type AdminLinks = {
+  spreadsheetUrl: string;
+  sheets: {
+    master:   { label: string; url: string | null };
+    schedule: { label: string; url: string | null };
+    kiroku:   { label: string; url: string | null };
+  };
+};
+
+export async function fetchAdminLinks(): Promise<AdminLinks> {
+  const url = getGasUrl();
+  if (!url) throw new Error('GAS URL未設定');
+  const res = await fetch(`${url}?action=getAdminLinks`, { redirect: 'follow' });
+  const json = await res.json() as { ok: boolean; error?: string } & AdminLinks;
+  if (!json.ok) throw new Error(json.error || 'エラー');
+  return json;
+}
+
 // kiroku（登録ページ）GAS：厚生局_訪問時間記録へ書き込む登録エンドポイント
 const KIROKU_GAS_URL = 'https://script.google.com/macros/s/AKfycbzrN2tl-V1F17UIJE-4HkL1zmZH8Mz3EDSIVRxtI5ZzfT-CLLb-GhtKkO4Nf64zgHzgjQ/exec';
 

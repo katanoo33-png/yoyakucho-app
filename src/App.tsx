@@ -10,6 +10,8 @@ import {
   fetchServiceTimes, fetchRegisteredNames, registerKirokuMonth,
 } from './api';
 import { getWeekdayDates, normalizeYoubi, newId, getKanaGroup, KANA_GROUPS, formatDateChip, toIso, getWeekNumInMonth, generateKirokuWeeks, parseTimeToMin } from './utils';
+import { fetchAdminLinks } from './api';
+import type { AdminLinks } from './api';
 
 // サービス種別定義（全て開始/終了ペア）
 const SVC_GROUPS = [
@@ -1347,6 +1349,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(!getGasUrl());
   const [gasUrlInput, setGasUrlInput]   = useState(getGasUrl());
   const [activeKana, setActiveKana] = useState<string>('全');
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [adminLinks, setAdminLinks] = useState<AdminLinks | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1582,6 +1587,24 @@ export default function App() {
     setShowSettings(true);
   }
 
+  function openAdmin() {
+    setShowAdmin(true);
+    if (!adminLinks) {
+      setAdminLoading(true);
+      fetchAdminLinks()
+        .then(links => setAdminLinks(links))
+        .catch(() => {/* GAS未設定時は無視 */})
+        .finally(() => setAdminLoading(false));
+    }
+  }
+
+  function handleDataReset() {
+    if (!window.confirm('当月の入力データをリセットします。\nGASから再読込した状態に戻ります。よろしいですか？')) return;
+    setShowAdmin(false);
+    loadData(year, month);
+    showToast('データをリセットしました');
+  }
+
 
   function scrollToKana(label: string) {
     setActiveKana(label);
@@ -1664,6 +1687,7 @@ export default function App() {
             title={`当月（${year}年${month}月）の訪問スケジュールをクラウドに保存します。次回アクセス時にも反映されます。`}>
             {saving ? '保存中…' : '保存'}
           </button>
+          <button className="btn-admin" onClick={openAdmin} title="管理画面">管理</button>
           <button className="btn-gear" onClick={openSettings}>⚙</button>
         </div>
       </header>
@@ -1705,6 +1729,51 @@ export default function App() {
 
       {/* トースト */}
       {toast && <div className="toast">{toast}</div>}
+
+      {/* 管理画面モーダル */}
+      {showAdmin && (
+        <div className="overlay" onClick={() => setShowAdmin(false)} role="presentation">
+          <div className="modal modal-admin" onClick={e => e.stopPropagation()}
+            role="dialog" aria-modal="true" aria-labelledby="admin-title">
+            <h2 id="admin-title">管理画面</h2>
+
+            {/* スプレッドシートリンク */}
+            <div className="settings-section">
+              <div className="settings-section-title">Google スプレッドシート</div>
+              {adminLoading && <p className="modal-note">読み込み中…</p>}
+              {!adminLoading && !adminLinks && (
+                <p className="modal-note" style={{color:'#b91c1c'}}>GAS URLを設定後に管理画面を開いてください。</p>
+              )}
+              {adminLinks && (
+                <div className="admin-links">
+                  {Object.values(adminLinks.sheets).map(s => (
+                    s.url ? (
+                      <a key={s.label} href={s.url} target="_blank" rel="noreferrer" className="admin-link-btn">
+                        <span className="admin-link-icon">📋</span>
+                        {s.label}
+                        <span className="admin-link-arrow">↗</span>
+                      </a>
+                    ) : null
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* データリセット */}
+            <div className="settings-section">
+              <div className="settings-section-title">データ操作</div>
+              <p className="modal-note">当月の入力データをGASから再読込した状態に戻します。未保存の編集内容は失われます。</p>
+              <button className="btn-reset-data" onClick={handleDataReset}>
+                🔄 当月データをリセット（再読込）
+              </button>
+            </div>
+
+            <div className="modal-row">
+              <button className="btn-primary" onClick={() => setShowAdmin(false)}>閉じる</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 設定モーダル */}
       {showSettings && (
