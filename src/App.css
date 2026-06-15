@@ -506,7 +506,11 @@ body {
 /* 列幅 */
 .th-name, .td-name  { min-width: 140px; }
 .th-youbi, .td-youbi { width: 60px; text-align: center; }
-.th-time, .td-time  { width: 72px; font-variant-numeric: tabular-nums; color: var(--text-2); font-size: .82rem; }
+.th-time, .td-time  { width: 90px; font-variant-numeric: tabular-nums; color: var(--text-2); font-size: .82rem; }
+.th-care, .td-care  { width: 72px; text-align: center; }
+.care-badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.care-yes { background: #fde8e8; color: #b91c1c; }
+.care-no  { background: #e8f0fe; color: #1e40af; }
 .th-dates, .td-dates { min-width: 160px; }
 .th-doctor, .td-doctor { min-width: 90px; }
 .th-hyg, .td-hyg    { min-width: 90px; }

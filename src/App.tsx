@@ -774,7 +774,7 @@ function ExpandMonthModal({ patientName, kana, patientInfo, year, month, onClose
     setDoneMsg('');
     const kanaVal = patientInfo.firstName || kana || '';
     const hasKaigo = patientInfo.careLevel === 'あり';
-    const baseTime = parseTimeToMin(patientInfo.time || '13:00');
+    const baseTime = parseTimeToMin(patientInfo.svcVisitTime || patientInfo.time || '13:00');
     try {
       for (const c of allMonths) {
         if (!selected.has(c.key)) continue;
@@ -1885,6 +1885,7 @@ export default function App() {
                   <th className="th-name">患者名</th>
                   <th className="th-youbi">曜日</th>
                   <th className="th-time">時間</th>
+                  <th className="th-care">介護</th>
                   <th className="th-dates">訪問日</th>
                   <th className="th-doctor">担当医師</th>
                   <th className="th-hyg">担当衛生士</th>
@@ -1956,7 +1957,17 @@ export default function App() {
                               ? pt.youbis.map(y => <YoubiBadge key={y} youbi={y} />)
                               : <YoubiBadge youbi="" />}
                           </td>
-                          <td className="td-time">{pt.pvs[0]?.time || pt.info?.time || '—'}</td>
+                          <td className="td-time">{(() => {
+                            const start = pt.info?.svcVisitTime || pt.pvs[0]?.svcVisitTime || pt.pvs[0]?.time || pt.info?.time || '';
+                            const end = pt.info?.svcVisitTimeEnd || pt.pvs[0]?.svcVisitTimeEnd || '';
+                            if (!start) return '—';
+                            return end ? `${start}〜${end}` : start;
+                          })()}</td>
+                          <td className="td-care">
+                            {pt.info?.careLevel === 'あり'
+                              ? <span className="care-badge care-yes">介護あり</span>
+                              : <span className="care-badge care-no">介護なし</span>}
+                          </td>
                           <td className="td-dates">
                             {pt.pvs.length === 0 ? (
                               <span className="no-visit">訪問なし</span>
